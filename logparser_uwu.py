@@ -148,8 +148,16 @@ def ucob_progress(combatants: set):
     return progress
 
 
-class ChangeZone:
+def uwu_progress(combatants: set):
+    if 'Titan' in combatants:
+        progress = 'Titan'
+    elif 'Ifrit' in combatants:
+        progress = 'Ifrit'
+    else:
+        progress = 'Garuda'
+    return progress
 
+class ChangeZone:
     DUMMY = 'dummy'
     # can be used to detect start of fight
     instance_to_enemy = {
@@ -235,7 +243,6 @@ class NetworkAbility:
 
 
 class LogLine:
-
     """This refers to loglines of type 00, not any logline"""
 
     def __init__(self, line: Line):
@@ -262,11 +269,6 @@ class LogLine:
 
         return value
 
-# not sure if this is a good idea
-# class ChangeZoneLine(Line):
-#     def __init__(self, line):
-#         super(ChangeZoneLine, self).__init__(line)
-
 
 class Fight:
     def __init__(self, start: datetime.datetime, end: datetime.datetime, location: str, status: str, combatants: set):
@@ -280,7 +282,6 @@ class Fight:
         minutes = self.duration.seconds // 60
         seconds = self.duration.seconds - minutes * 60
         self.printable_duration = f'{minutes}:{seconds}'
-
 
     def __repr__(self):
         return f'{self.start.strftime("%d/%m/%y %H:%M:%S")} [{self.printable_duration}] {self.status} in {self.location}'
@@ -314,6 +315,7 @@ class LogParser:
             #  TODO use this to distinguish between multiple battles featuring the same enemies, such as e7s and e7
             if l.type is LogTypes.ChangeZone:
                 zone = ChangeZone(l)
+                print(zone)
 
             # detect start of fight
             if l.type is LogTypes.NetworkAbility and not in_fight:
@@ -328,8 +330,7 @@ class LogParser:
 
                 # players start with '10', enemies with '40'
                 elif na.target_id.startswith('40') and na.target:
-                    pass
-                    # print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
+                    print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
 
             # list all combatants
             if l.type is LogTypes.NetworkAbility:
@@ -359,8 +360,8 @@ def visualize(encounters: typing.List[Fight]):
         'date': [encounter.start.date() for encounter in encounters]
     }
 
-    if all([e.location == 'TheUnendingCoilOfBahamutUltimate' for e in encounters]):
-        data['progress'] = [ucob_progress(e.combatants) for e in encounters]
+    if all([e.location == 'TheWeaponsRefrainUltimate' for e in encounters]):
+        data['progress'] = [uwu_progress(e.combatants) for e in encounters]
 
     data = pandas.DataFrame(data=data)
     sns.set_theme()
@@ -370,7 +371,12 @@ def visualize(encounters: typing.List[Fight]):
     else:
         g = sns.scatterplot(y='duration', x=data.index, data=data)
 
+    # garuda_enrage = g.axhline(158, ls='--', label='Garuda', color='black')
+    # ifrit_enrage = g.axhline(317, ls='--', label='ifrit', color='black')
+    #garuda_enrage.text(0.5, 25, 'garuda enrage')
+
     g.set(xlabel='pull number', ylabel='duration (in seconds)')
+    print(plt.legend())
     plt.show()
 
 
@@ -385,15 +391,12 @@ def export_to_csv(encounters: typing.List[Fight], path="most_recent.csv"):
     :return:
     """
 
-    if not all([e.location == 'TheUnendingCoilOfBahamutUltimate' for e in encounters]):
-        raise NotImplementedError('only ucob is supported atm')
-
     data = {
         'duration': [encounter.duration.seconds for encounter in encounters],
-        'progress': [ucob_progress(e.combatants) for e in encounters]
+        'progress': [uwu_progress(e.combatants) for e in encounters]
     }
 
-    phases = ["Twintania", "Nael deus Darnus", "Bahamut Prime", "Nael and Twintania", "Golden Bahamut Prime"]
+    phases = ["Garuda", "Ifrit", "Titan", "Ultimate Weapon"]
 
     csv_lines = [p + "," for p in phases] + ["pull number, "]
     pull_number = 0
@@ -404,7 +407,7 @@ def export_to_csv(encounters: typing.List[Fight], path="most_recent.csv"):
                 csv_lines[i] += str(duration) + ","
             else:
                 csv_lines[i] += ","
-        csv_lines[5] += f'{pull_number},'
+        csv_lines[4] += f'{pull_number},'
         pull_number += 1
 
     for i, line in enumerate(csv_lines):
@@ -419,13 +422,16 @@ if __name__ == '__main__':
     # visualize([f for f in lp.extract_fights() if f.location == 'TheUnendingCoilOfBahamutUltimate'])
 
     all_encounters = []
-    for log_path in glob('new_ucob/*.log'):
+    # for log_path in glob('uwu_logs/*.log'):
+    for log_path in glob('baatulogs/*.log'):
     # for log_path in glob('sample_logs/*.log'):
-    #for log_path in glob('new_ucob/*419.log'):
+    # for log_path in glob('new_ucob/*419.log'):
         print(log_path)
         all_encounters += LogParser(log_path).extract_fights()
 
-    all_encounters = [f for f in all_encounters if f.location == 'TheUnendingCoilOfBahamutUltimate']
+    print(f'found {len(all_encounters)} encounters')
+    print(all_encounters)
+    all_encounters = [f for f in all_encounters if f.location == 'TheWeaponsRefrainUltimate']
     # print(all_encounters)
     visualize(all_encounters)
     export_to_csv(all_encounters)

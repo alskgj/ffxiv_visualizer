@@ -145,6 +145,7 @@ class LogLineType(Enum):
 # can be used to detect start of fights
 object_ids = {
     'Twintania': 'UCoB',
+    'Garuda': 'TheWeaponsRefrainUltimate',
     'The Idol Of Darkness': 'e7',
     'Shiva': 'e8',
     'Neo Exdeath': 'o4',

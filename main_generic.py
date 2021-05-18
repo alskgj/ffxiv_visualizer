@@ -13,25 +13,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-class NetworkDeath:
-    def __init__(self, raw_line):
-        line = raw_line.split('|')
-        if line[0] != '25':
-            print("faulty network death line...")
-            self.victim = None
-            self.killer = None
-            self.datetime = None
-            return
-
-        self.victim = line[3]
-        self.killer = constants.kill_mechanics[line[5]]
-        self.datetime = Parser.extract_time(raw_line)
-
-    def __str__(self):
-        return f'{self.victim} was killed by {self.killer}'
-
-
-
 class Encounter:
     def __init__(self, start: datetime.datetime, duration: datetime.timedelta, kill_count: dict):
         self.start = start
@@ -39,6 +20,7 @@ class Encounter:
         self.date = start.date()
         self.kill_count = kill_count
 
+        # todo remove ucob specific stuff
         if self.duration > constants.enrage_time_nael_twintania:
             self.progress = "Golden Bahamut Prime"
         elif self.duration > constants.enrage_time_bahamut_prime:
@@ -61,6 +43,7 @@ class Parser:
     def __init__(self, path):
         with open(path, 'r', encoding='utf-8') as fo:
             self.lines = [line.strip() for line in fo.readlines()]
+        self.path = path
 
     def find_slices(self):
         slices = []
@@ -68,7 +51,7 @@ class Parser:
         current_start = -1
         for i, line in enumerate(self.lines):
             if re.match(r'01\|.+the Unending Coil of Bahamut \(Ultimate\)\|', line):
-                print(line)
+                print(self.path)
                 in_ucob, current_start = True, i
             elif in_ucob and line.startswith('01|'):
                 in_ucob = False
@@ -96,16 +79,6 @@ class Parser:
                     in_fight = True
                     start = self.extract_time(line)
 
-                if in_fight and line.startswith(f'{constants.NetworkDeath}|'):
-                    death = NetworkDeath(line)
-                    if death.killer == 'Edge of the map':
-                        continue
-
-                    if death.killer not in kill_count:
-                        kill_count[death.killer] = 1
-                    else:
-                        kill_count[death.killer] += 1
-
                 # yields the same (incomplete data) as parsing NetworkDeaths
                 # if in_fight and line.startswith('00|') and 'defeated' in line:
                 #     print(line)
@@ -116,9 +89,8 @@ class Parser:
                     encounters.append(Encounter(start, fight_duration, kill_count))
                     kill_count = {}  # reset killcount
 
-
-
         return encounters
+
 
 
 def visualize(encounters: typing.List[Encounter]):
