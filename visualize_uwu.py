@@ -1,6 +1,6 @@
 import constants
-from logparser_uwu import uwu_progress
-import logfinder
+from modules.uwu import uwu_progress
+import db_filler
 
 import pymongo
 
@@ -23,7 +23,7 @@ def visualize(data: pandas.DataFrame):
 
 
 if __name__ == '__main__':
-    logfinder.update_db()
+    db_filler.update_db()
 
     client = pymongo.MongoClient()
     col = client['logs']['encounters']

@@ -2,3 +2,5 @@
 /64venv/
 /.idea/
 /__pycache__/
+/modules/__pycache__/
+/baatulogs/

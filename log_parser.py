@@ -1,4 +1,17 @@
-from constants import LogTypes, ActorControlTypes, LogLineType
+"""
+
+    log_parser.py
+    =============
+
+    this module contains classes for parsing log files generated with
+    ACT (Advanced Combat Tracker).
+    Much of the information used is from:
+    https://github.com/quisquous/cactbot/blob/main/docs/LogGuide.md
+
+"""
+
+
+from constants import LogTypes, ActorControlTypes
 import typing
 import datetime
 import re
