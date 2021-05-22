@@ -152,6 +152,11 @@ object_ids = {
     'Striking Dummy': 'Dummy'
 }
 
+
+class Locations:
+    UWU = 'TheWeaponsRefrainUltimate'
+
+
 # from https://github.com/quisquous/cactbot/blob/main/resources/zone_id.js
 zone_ids = {'230': 'ABloodyReunion', '170': 'ARelicRebornTheChimera', '171': 'ARelicRebornTheHydra',
             '33e': 'ARequiemForHeroes', '392': 'ASleepDisturbed', '215': 'ASpectacleForTheAges',

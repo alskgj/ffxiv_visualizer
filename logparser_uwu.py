@@ -92,7 +92,12 @@ class Line:
     def __init__(self, raw_line: str):
         self.raw_line = raw_line
         self.line = raw_line.split('|')
-        self.identifier = int(self.line[0])
+        try:
+            self.identifier = int(self.line[0])
+        except ValueError:
+            # this seems to happen rarely - maybe race conditions?
+            # todo - do I need to do some error handling here?
+            self.identifier = 9999
 
         if self.identifier in self.identifier_mapping:
             self.type = self.identifier_mapping[self.identifier]
@@ -231,12 +236,21 @@ class NetworkAbility:
     42687|10000|10000|0|1000|0.8391724|11.52051|-5.960464E-08|-3.109187|00004D5E|1d883299c6c1eb50bf770cc5c9d5b8e3
     """
     def __init__(self, line: Line):
+        if len(line.line) != 47:
+            raise NotImplementedError("Malformed line")
+
         self.line = line
         self.caster = line.line[3]
         self.ability = line.line[5]
         self.target_id = line.line[6]
         self.target = line.line[7]
-        self.damage = int(int(line.line[9], 16)/(16**4))
+
+        try:
+            self.damage = int(int(line.line[9], 16)/(16**4))
+        except ValueError:
+            self.damage = 1
+        except IndexError:
+            self.damage = 2
 
     def __str__(self):
         return f'{self.line.printable_time} {self.caster} uses {self.ability} on {self.target_id}:{self.target}, for {self.damage} damage.'
@@ -273,6 +287,8 @@ class LogLine:
 class Fight:
     def __init__(self, start: datetime.datetime, end: datetime.datetime, location: str, status: str, combatants: set):
         self.combatants = combatants  # used to detect progress in ucob
+        if '' in self.combatants:
+            self.combatants.remove('')
         self.start = start
         self.end = end
         self.location = location
@@ -289,18 +305,18 @@ class Fight:
 
 class LogParser:
 
-
     def __init__(self, log_path: str):
-        with open(log_path, 'r', encoding='utf-8') as fo:
-            self.lines = [line.strip() for line in fo.readlines()]
+        try:
+            with open(log_path, 'r', encoding='latin-1') as fo:
+                self.lines = [line.strip() for line in fo.readlines()]
+        except UnicodeDecodeError as UDE:
+            print(f"Got an UnicodeDecodeError handling {log_path}")
+            self.lines = []
+            raise UDE
         self.log_path = log_path
 
-        # for i, line in enumerate(self.lines[338027-15+1751:338027+6000]):
-
     def extract_fights(self) -> typing.List[Fight]:
-
         # for i, line in enumerate(self.lines[338027-5:338027+4000]):
-
         in_fight = False
         fight_start = None
         fight_location = None
@@ -315,11 +331,14 @@ class LogParser:
             #  TODO use this to distinguish between multiple battles featuring the same enemies, such as e7s and e7
             if l.type is LogTypes.ChangeZone:
                 zone = ChangeZone(l)
-                print(zone)
 
             # detect start of fight
             if l.type is LogTypes.NetworkAbility and not in_fight:
-                na = NetworkAbility(l)
+                try:
+                    na = NetworkAbility(l)
+                except NotImplementedError:
+                    # malformed line
+                    continue
 
                 if na.target in constants.object_ids:
                     fight_combatants = set()
@@ -330,7 +349,8 @@ class LogParser:
 
                 # players start with '10', enemies with '40'
                 elif na.target_id.startswith('40') and na.target:
-                    print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
+                    # print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
+                    pass
 
             # list all combatants
             if l.type is LogTypes.NetworkAbility:
@@ -344,9 +364,11 @@ class LogParser:
                     fight_end = acl.line.time
                     status = 'Victory' if acl.actor_type is ActorControlTypes.Victory else 'Wipe'
                     fight = Fight(fight_start, fight_end, fight_location, status, combatants=fight_combatants)
-                    print(f'{fight} with {fight_combatants}')
+                    # print(f'{fight} with {fight_combatants}')
                     in_fight = False
                     fights.append(fight)
+                    fight_combatants = set()
+
 
         # fights = [fight for fight in fights if fight.location == 'UCoB']
         return fights
@@ -422,8 +444,8 @@ if __name__ == '__main__':
     # visualize([f for f in lp.extract_fights() if f.location == 'TheUnendingCoilOfBahamutUltimate'])
 
     all_encounters = []
-    # for log_path in glob('uwu_logs/*.log'):
-    for log_path in glob('baatulogs/*.log'):
+    for log_path in glob('uwu_logs/*.log'):
+    # for log_path in glob('baatulogs/*.log'):
     # for log_path in glob('sample_logs/*.log'):
     # for log_path in glob('new_ucob/*419.log'):
         print(log_path)
