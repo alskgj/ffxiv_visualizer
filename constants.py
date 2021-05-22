@@ -2,8 +2,6 @@ from datetime import timedelta
 import re
 from enum import Enum
 
-LOG_PATH = r'C:\Users\Dimitri\AppData\Roaming\Advanced Combat Tracker\FFXIVLogs'
-
 ACTOR_CONTROL_LINES = 33
 INSTANCED = 8003
 ACTOR_CONTROL_LINES_WIPE = 40000005

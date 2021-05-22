@@ -16,7 +16,7 @@
 import glob
 
 import log_parser
-import constants
+import config
 
 import pymongo
 from pymongo import errors
@@ -34,7 +34,7 @@ def update_db():
     processed = db['processed'].find({'processed': True})
     processed = [file['document'] for file in processed]
 
-    for file in glob.glob(constants.LOG_PATH+r'\*.log'):
+    for file in glob.glob(config.LOG_PATH+r'\*.log'):
         if file in processed:
             continue
 
