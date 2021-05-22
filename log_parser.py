@@ -21,7 +21,7 @@ from termcolor import colored
 
 class Fight:
     def __init__(self, start: datetime.datetime, end: datetime.datetime, location: str, status: str, combatants: set):
-        self.combatants = combatants  # used to detect progress in ucob
+        self.combatants = combatants
         if '' in self.combatants:
             self.combatants.remove('')
         self.start = start
@@ -36,7 +36,6 @@ class Fight:
 
     def __repr__(self):
         return f'{self.start.strftime("%d/%m/%y %H:%M:%S")} [{self.printable_duration}] {self.status} in {self.location}'
-
 
 
 class Line:
@@ -71,8 +70,6 @@ class Line:
         0x04: LogTypes.RemoveCombatant,
         0x23: LogTypes.NetworkTether,
         0xfb: LogTypes.Debug
-
-
     }
 
     def __init__(self, raw_line: str):
@@ -111,6 +108,7 @@ class Line:
         else:
             return f'UNKNOWN:{self.identifier}: {self.raw_line}'
 
+
 class NetworkAbility:
     """From: https://github.com/quisquous/cactbot/blob/main/docs/LogGuide.md#15-networkability
     21|2020-11-03T21:41:45.1000000+01:00|106A1180|Shypai Priest|1D12|Malefic III|40015B1B|Twintania|750003|
@@ -136,6 +134,7 @@ class NetworkAbility:
 
     def __str__(self):
         return f'{self.line.printable_time} {self.caster} uses {self.ability} on {self.target_id}:{self.target}, for {self.damage} damage.'
+
 
 class ActorControlLine:
     # ucob seems to be 80037569

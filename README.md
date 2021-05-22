@@ -8,15 +8,15 @@ them in a local mongodb.
 
 ![uwu pulls](Documentation/uwu_plot.png)
 
-Since this tool puts your data in a mongodb, you can also use tools like MongoDB 
+Since ffxiv visualizer puts your data in a mongodb, you can also use tools like MongoDB 
 Compass for information gathering.
 
 ![mongodb_compass](Documentation/mongodb_compass.png)
 
-## installation
+## Installation
 
 - Download this project
-- Install the requirements
+- Install the requirements with
 `python3 -m pip install -r requirements.txt`
 - Install mongodb from https://www.mongodb.com/try/download/community
 - Change the log path in `config.py` to whatever path you use 
