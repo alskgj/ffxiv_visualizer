@@ -155,6 +155,7 @@ object_ids = {
 
 class Locations:
     UWU = 'TheWeaponsRefrainUltimate'
+    UCoB = 'TheUnendingCoilOfBahamutUltimate'
 
 
 # from https://github.com/quisquous/cactbot/blob/main/resources/zone_id.js
