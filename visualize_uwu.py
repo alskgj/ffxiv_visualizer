@@ -8,9 +8,12 @@ import pymongo
 import pandas
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['figure.dpi'] = 300
 
 
 def visualize(data: pandas.DataFrame):
+    plt.figure()
     sns.set_theme()
     sns.set_style('ticks')
     if 'progress' in data:
@@ -19,6 +22,8 @@ def visualize(data: pandas.DataFrame):
         g = sns.scatterplot(y='duration', x=data.index, data=data)
 
     g.set(xlabel='pull number', ylabel='duration (in seconds)')
+
+    # plt.savefig('result.png', dpi=300)
     plt.show()
 
 
