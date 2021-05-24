@@ -15,12 +15,10 @@ enrage_time_bahamut_prime = enrage_time_nael + timedelta(minutes=5, seconds=34)
 enrage_time_nael_twintania = enrage_time_bahamut_prime + timedelta(minutes=2, seconds=19)
 enrage_time_gold_bahamut = enrage_time_nael_twintania + timedelta(minutes=3, seconds=29)
 
-
 # maps different things that kill to the corresponding phase
 kill_mechanics = {
     'Twintania': 'Twintania',
     'Oviform': 'Twintania',  # hatch
-
 
     'Nael Deus Darnus': 'Neal Deus Darnus',
 
@@ -112,7 +110,6 @@ class ActorControlTypes(Enum):
     UnknownActorControl9 = 14
 
 
-
 actor_control_types_mapping = {
     '40000001': ActorControlTypes.InitialCommence,
     '40000006': ActorControlTypes.Recommence,
@@ -152,13 +149,21 @@ object_ids = {
     'Striking Dummy': 'Dummy'
 }
 
+manual_bosses_per_zone = {
+    'Deltascape V4.0 (Savage)': ['Neo Exdeath'],
+    "Eden's Promise: Eternity (Savage)": ['Oracle Of Darkness'],
+    "The Tower at Paradigm's Breach": ['9S'],
+    'other': []
+}
+
 
 class Locations:
-    UWU = 'TheWeaponsRefrainUltimate'
-    UCoB = 'TheUnendingCoilOfBahamutUltimate'
+    UWU = "the Weapon's Refrain (Ultimate)"
+    UCoB = "the Unending Coil of Bahamut (Ultimate)"
 
 
-# from https://github.com/quisquous/cactbot/blob/main/resources/zone_id.js
+# from https://github.com/quisquous/cactbot/blob/main/resources/zone_id.ts
+#
 zone_ids = {'230': 'ABloodyReunion', '170': 'ARelicRebornTheChimera', '171': 'ARelicRebornTheHydra',
             '33e': 'ARequiemForHeroes', '392': 'ASleepDisturbed', '215': 'ASpectacleForTheAges',
             '21c': 'AccrueEnmityFromMultipleTargets', '340': 'AirForceOne', '349': 'AkadaemiaAnyder', '2b1': 'AlaMhigo',

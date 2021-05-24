@@ -61,7 +61,7 @@ class DBApi:
             },
             upsert=True)
 
-    def save_encounter(self, encounter: log_parser.Fight, file: str):
+    def save_encounter(self, encounter: log_parser.Fight, file: str, verbose=False):
         data = {
             'document': file,
             'location': encounter.location,
@@ -73,7 +73,8 @@ class DBApi:
         try:
             self.encounters.insert_one(data)
         except pymongo.errors.DuplicateKeyError:
-            print(f'skipping insertion of [{encounter}]')
+            if verbose:
+                print(f'skipping insertion of [{encounter}] from file {file}')
             # this should never happen! we tried to insert a fight that
             # was already in, even though we are in an unprocessed logfight.
 

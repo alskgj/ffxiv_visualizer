@@ -3,3 +3,4 @@ termcolor
 pymongo
 pandas
 matplotlib
+requests

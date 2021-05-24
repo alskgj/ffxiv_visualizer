@@ -9,14 +9,15 @@
     https://github.com/quisquous/cactbot/blob/main/docs/LogGuide.md
 
 """
-
-
+import util
 from constants import LogTypes, ActorControlTypes
 import typing
 import datetime
 import re
 import constants
 from termcolor import colored
+import json
+from util import is_first_boss
 
 
 class Fight:
@@ -116,7 +117,7 @@ class NetworkAbility:
     42687|10000|10000|0|1000|0.8391724|11.52051|-5.960464E-08|-3.109187|00004D5E|1d883299c6c1eb50bf770cc5c9d5b8e3
     """
     def __init__(self, line: Line):
-        if len(line.line) != 47:
+        if len(line.line) < 10: # this can be variable length - for special case shifts
             raise NotImplementedError("Malformed line")
 
         self.line = line
@@ -159,34 +160,39 @@ class ActorControlLine:
 class ChangeZone:
     DUMMY = 'dummy'
     # can be used to detect start of fight
-    instance_to_enemy = {
-        'TheUnendingCoilOfBahamutUltimate': 'Twintania',
-        'EdensVerseIconoclasm': 'The Idol Of Darkness',
-        'EdensVerseIconoclasmSavage': 'The Idol Of Darkness',
-        'EdensVerseRefulgence': 'Shiva',
-        'EdensVerseRefulgenceSavage': 'Shiva',
-        'DeltascapeV40Savage': 'Neo Exdeath',
-
-
-        'Kugane': DUMMY,
-        'other': DUMMY
-    }
 
     def __init__(self, line: Line):
         self.id = line.line[2]
         self.ingame_name = line.line[3]
-        try:
-            self.name = constants.zone_ids[self.id]
-        except KeyError:
-            self.name = 'other'
+        self.encounters = json.load(open('data/encounters.json', 'r'))
 
-        if self.name in self.instance_to_enemy:
-            self.enemy = self.instance_to_enemy[self.name]
+        if self.ingame_name in self.encounters:
+            self.name = self.ingame_name
         else:
-            self.enemy = 'idk'
+            self.name = 'other'
 
     def __str__(self):
         return f"ChangeZone to {self.ingame_name}"
+
+
+class AddCombatant:
+    def __init__(self, line: Line):
+        """
+        Example:
+        03|2020-08-15T09:07:14.8210000+02:00|4002c2fe|Spriggan Graverobber |0|7|0|0 |     |0|101|126|126|0    |10000|0|0|-196.8746|131.4472|-27.01929|-0.3914108||9610215b6e4d7780f2188fc6134eb07e
+        03|2020-08-15T09:05:56.1290000+02:00|10725ddf|Gin Barlow           |1|b|0|27|Omega|0|0  |170|215|10000|10000|0|0|-202.7534|-101.8441|21.88762|-2.511565 ||0d244d9ef72e82f3de5ee35ee21efaee
+        """
+        if len(line.line) < 9:
+            raise NotImplementedError
+
+        self.id = line.line[2]
+        self.ingame_name = line.line[3]
+        self.class_id = line.line[7]
+        if self.class_id == '0':
+            self.is_player = False
+        else:
+            self.is_player = True
+        self.server = line.line[8]
 
 
 class LogParser:
@@ -200,8 +206,13 @@ class LogParser:
             self.lines = []
             raise UDE
         self.log_path = log_path
+        self.encounters = json.load(open('data/encounters.json', 'r'))
 
-    def extract_fights(self) -> typing.List[Fight]:
+        self.unknown_enemies = {}
+
+        self.guessed_zone_to_boss_mapping = {}
+
+    def extract_fights(self, verbose=False) -> typing.List[Fight]:
         # for i, line in enumerate(self.lines[338027-5:338027+4000]):
         in_fight = False
         fight_start = None
@@ -209,38 +220,70 @@ class LogParser:
         fights = []
         fight_combatants = set()
         zone = None
+        enemies_seen = set()
 
         for i, line in enumerate(self.lines):
             l = Line(line)
 
-            # detect instance -
-            #  TODO use this to distinguish between multiple battles featuring the same enemies, such as e7s and e7
+            # detect instance
+            #  TODO use this to distinguish between multiple battles featuring the same enemies, such as e7s and e7n
             if l.type is LogTypes.ChangeZone:
                 zone = ChangeZone(l)
+                enemies_seen = set()  # reset on zone change
+
+            if zone is None:
+                continue
+
+            if l.type is LogTypes.AddCombatant:
+                try:
+                    combatant = AddCombatant(l)
+                except NotImplementedError:
+                    continue  # bad line
+
+                if not combatant.is_player and combatant.ingame_name not in enemies_seen:
+                    if combatant.ingame_name:
+                        # print(f'{combatant.ingame_name:<30} {line}')
+                        enemies_seen.add(combatant.ingame_name)
 
             # detect start of fight
-            if l.type is LogTypes.NetworkAbility and not in_fight:
+            if l.type is LogTypes.NetworkAbility and not in_fight and zone.name != 'other':
                 try:
                     na = NetworkAbility(l)
                 except NotImplementedError:
                     # malformed line
+                    if verbose:
+                        print(f'malformed line: {line}')
                     continue
 
-                if na.target in constants.object_ids:
+                if util.is_first_boss(zone_name=zone.name, boss_name=na.target):
                     fight_combatants = set()
-                    # fight_location = constants.object_ids[na.target]
                     fight_location = zone.name
                     in_fight = True
                     fight_start = na.line.time
 
-                # players start with '10', enemies with '40'
-                elif na.target_id.startswith('40') and na.target:
-                    # print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
-                    pass
+                elif na.target in enemies_seen:
+                    if zone.name in self.unknown_enemies:
+                        self.unknown_enemies[zone.name]['rest'].add(na.target)
+                    else:
+                        self.unknown_enemies[zone.name] = set()
+                        self.unknown_enemies[zone.name] = {
+                            'first': na.target,
+                            'rest': set()
+                    }
+                # elif na.target_id.startswith('40') and zone.name != 'other' and na.target in enemies_seen:
+                #     # print(f'unknown enemy {na.target} with id {na.target_id} in zone {zone.name if zone else None}')
+                #     print(f'adding {na.target}')
+                #     if zone.name in self.unknown_enemies:
+                #         self.unknown_enemies[zone.name].add(na.target)
+                #     else:
+                #         self.unknown_enemies[zone.name] = set(na.target)
 
-            # list all combatants
+            # collect combatants
             if l.type is LogTypes.NetworkAbility:
-                na = NetworkAbility(l)
+                try:
+                    na = NetworkAbility(l)
+                except NotImplementedError:
+                    continue
                 fight_combatants.add(na.target)
 
             # detect end of fight
@@ -253,8 +296,15 @@ class LogParser:
                     # print(f'{fight} with {fight_combatants}')
                     in_fight = False
                     fights.append(fight)
-                    fight_combatants = set()
+                    fight_combatants = set() # clear combatans
 
+        if verbose:
+            for key, val in self.unknown_enemies.items():
+                print(f'{key}: {val["first"]}')
+                print('Other candidates:')
+                print(val['rest'])
+        for key, val in self.unknown_enemies.items():
+            self.guessed_zone_to_boss_mapping[key] = [val["first"]]
 
-        # fights = [fight for fight in fights if fight.location == 'UCoB']
         return fights
+
